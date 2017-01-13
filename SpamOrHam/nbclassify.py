@@ -49,14 +49,17 @@ class Classify:
     wordTable = defaultdict(lambda: [0, 0])
 
     resultTable = list()
-    identifiedSpam = 0
+
     actualSpam = 0
-    identifiedHam = 0
     actualHam = 0
+    correctlyIdentifiedSpam = 0
+    correctlyIdentifiedHam = 0
+    wronglyIdentifiedHam = 0
+    wronglyIdentifiedSpam = 0
     totalDocs = 0
 
 
-    def stripWords(self,inputFile):
+    def stripWords(self,inputFile,fileWriter):
 
         #METRICS
         self.totalDocs += 1
@@ -83,14 +86,20 @@ class Classify:
 
 
         if(totSpam > totHam):
-            print("SPAM ->",inputFile.name,)
+            # print("SPAM ->",inputFile.name)
+            fileWriter.write('spam {}\n'.format(inputFile.name))
             if('spam.txt' in inputFile.name):
-                self.identifiedSpam += 1
+                self.correctlyIdentifiedSpam += 1
+            if ('ham.txt' in inputFile.name):
+                self.wronglyIdentifiedSpam += 1
 
         else:
-            print("HAM ->",inputFile.name)
+            # print("HAM ->",inputFile.name)
+            fileWriter.write('ham {}\n'.format(inputFile.name))
             if ('ham.txt' in inputFile.name):
-                self.identifiedHam += 1
+                self.correctlyIdentifiedHam += 1
+            if ('spam.txt' in inputFile.name):
+                self.wronglyIdentifiedHam += 1
 
         if ('spam.txt' in inputFile.name):
             self.actualSpam += 1
@@ -102,7 +111,7 @@ class Classify:
     def readFromFile(self):
 
 
-        with open('model_data.txt', 'r') as f:
+        with open('nbmodel.txt', 'r') as f:
             fileLines = f.read().splitlines()
 
         modelInfo = fileLines[:6]
@@ -117,10 +126,10 @@ class Classify:
             else:
                 rowKey = rowData.split("@-:-@")[1]
                 rowValue = rowData.split("@-:-@")[0]
-                self.wordTable[rowKey][0] = 0.0 if float(rowValue.split(",")[0]) == 0 else (math.log(float(rowValue.split(",")[0])))
-                self.wordTable[rowKey][1] = 0.0 if float(rowValue.split(",")[1]) == 0 else (math.log(float(rowValue.split(",")[1])))
+                self.wordTable[rowKey][0] = math.log(float(rowValue.split(",")[0]))
+                self.wordTable[rowKey][1] = math.log(float(rowValue.split(",")[1]))
 
-    def readNewDoc(self,inputpath):
+    def readNewDoc(self,inputpath,fileWriter):
         for root, dirs, files in os.walk(inputpath):
             # print(root)
             # beg = root.find('/', len(root) - 5)
@@ -132,7 +141,7 @@ class Classify:
                 if ".DS_Store" not in f:
                     fullPathString = ('{}/{}'.format(root, f))
                     file = open(fullPathString, "r", encoding="latin1")
-                    self.stripWords(file)
+                    self.stripWords(file,fileWriter)
 
 
 
@@ -144,18 +153,28 @@ class Classify:
 if __name__ == '__main__':
     classify = Classify()
     classify.readFromFile()
-    classify.readNewDoc(sys.argv[1])
+    with open('nboutput.txt', 'w') as fileWriter:
+        classify.readNewDoc(sys.argv[1],fileWriter)
 
     hamAccuracy =0
     spamAccuracy =0
 
-    if(classify.actualSpam != 0):
-        spamAccuracy = classify.identifiedSpam/classify.actualSpam
-    if (classify.actualHam != 0):
-        hamAccuracy = classify.identifiedHam/classify.actualHam
 
-    print("SPAM Accuracy =", spamAccuracy*100)
-    print("HAM Accuracy=", hamAccuracy*100)
+    precisionSpam = classify.correctlyIdentifiedSpam/(classify.correctlyIdentifiedSpam + classify.wronglyIdentifiedSpam)
+    recallSpam = classify.correctlyIdentifiedSpam/classify.actualSpam
+    f1Spam = (2*precisionSpam*recallSpam)/(precisionSpam + recallSpam)
+
+    print("SPAM Precision =",precisionSpam)
+    print("SPAM Recall =",recallSpam)
+    print("SPAM F1 Score =",f1Spam)
+
+    precisionHam = classify.correctlyIdentifiedHam/(classify.correctlyIdentifiedHam + classify.wronglyIdentifiedHam)
+    recallHam = classify.correctlyIdentifiedHam/classify.actualHam
+    f1Ham = (2 * precisionHam * recallHam) / (precisionHam + recallHam)
+
+    print("HAM Precision =",precisionHam)
+    print("HAM Recall =",recallHam)
+    print("HAM F1 Score =",f1Ham)
 
     # bayesData = BayesData()
     # bayesData.list_files(sys.argv[1])

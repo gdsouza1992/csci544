@@ -1,3 +1,4 @@
+
 import os
 import sys
 
@@ -86,7 +87,7 @@ class Helper:
         spamCount = bayesModel.totalSpamDocs
         hamCount = bayesModel.totalHamDocs
 
-        with open('model_data.txt', 'w') as fileWriter:
+        with open('nbmodel.txt', 'w') as fileWriter:
 
             fileWriter.write('HAM_DOCS = {}\n'.format(hamCount))
             fileWriter.write('HAM_WORDS = {}\n'.format(bayesModel.totalHamWords))
@@ -110,3 +111,4 @@ if __name__ == '__main__':
     bayesData.list_files(sys.argv[1])
     Helper().writeDictToFile(bayesData)
     print('done')
+    print(len(bayesData.wordTable))
